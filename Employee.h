@@ -6,6 +6,7 @@
 
 class Employee {
 private:
+    int id;                         // ID в БД (AUTOINCREMENT)
     std::string fullName;           // ФИО
     std::string workshop;           // Наименование цеха
     double salary;                  // Зарплата
@@ -20,13 +21,15 @@ private:
     double averageEarnings;         // Средний заработок
 
 public:
-    // Конструктор
+    // Конструкторы
     Employee();
     Employee(const std::string& name, const std::string& shop, double sal, int birth,
              const std::string& hire, const std::string& marital, char gen, int children,
-             const std::string& illness, const std::string& recovery, double bulletinPay, double avgEarn);
+             const std::string& illness, const std::string& recovery, double bulletinPay, double avgEarn,
+             int employeeId = -1);
 
     // Геттеры
+    int getId() const;
     std::string getFullName() const;
     std::string getWorkshop() const;
     double getSalary() const;
@@ -41,6 +44,7 @@ public:
     double getAverageEarnings() const;
 
     // Сеттеры
+    void setId(int newId);
     void setFullName(const std::string& name);
     void setWorkshop(const std::string& shop);
     void setSalary(double sal);

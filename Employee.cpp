@@ -2,18 +2,20 @@
 #include <clocale>
 
 Employee::Employee() 
-    : fullName(""), workshop(""), salary(0), birthYear(0), hireDate(""),
+    : id(-1), fullName(""), workshop(""), salary(0), birthYear(0), hireDate(""),
       maritalStatus(""), gender(' '), childrenCount(0), illnessDate(""),
       recoveryDate(""), bulletinPayPercent(0), averageEarnings(0) {}
 
 Employee::Employee(const std::string& name, const std::string& shop, double sal, int birth,
                    const std::string& hire, const std::string& marital, char gen, int children,
-                   const std::string& illness, const std::string& recovery, double bulletinPay, double avgEarn)
-    : fullName(name), workshop(shop), salary(sal), birthYear(birth), hireDate(hire),
+                   const std::string& illness, const std::string& recovery, double bulletinPay, double avgEarn,
+                   int employeeId)
+    : id(employeeId), fullName(name), workshop(shop), salary(sal), birthYear(birth), hireDate(hire),
       maritalStatus(marital), gender(gen), childrenCount(children), illnessDate(illness),
       recoveryDate(recovery), bulletinPayPercent(bulletinPay), averageEarnings(avgEarn) {}
 
 // Геттеры
+int Employee::getId() const { return id; }
 std::string Employee::getFullName() const { return fullName; }
 std::string Employee::getWorkshop() const { return workshop; }
 double Employee::getSalary() const { return salary; }
@@ -28,6 +30,7 @@ double Employee::getBulletinPayPercent() const { return bulletinPayPercent; }
 double Employee::getAverageEarnings() const { return averageEarnings; }
 
 // Сеттеры
+void Employee::setId(int newId) { id = newId; }
 void Employee::setFullName(const std::string& name) { fullName = name; }
 void Employee::setWorkshop(const std::string& shop) { workshop = shop; }
 void Employee::setSalary(double sal) { salary = sal; }
@@ -43,6 +46,9 @@ void Employee::setAverageEarnings(double avgEarn) { averageEarnings = avgEarn; }
 
 void Employee::display() const {
     std::cout << "\n=== Информация о сотруднике ===\n";
+    if (id > 0) {
+        std::cout << "ID (БД): " << id << "\n";
+    }
     std::cout << "ФИО: " << fullName << "\n";
     std::cout << "Цех: " << workshop << "\n";
     std::cout << "Зарплата: " << salary << " руб.\n";

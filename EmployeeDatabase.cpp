@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <clocale>
 #include <sstream>
+#include <limits>
 #include <utility>
 
 namespace {
@@ -51,16 +52,29 @@ void EmployeeDatabase::addEmployee(const Employee& emp) {
     employees.push_back(emp);
 }
 
-void EmployeeDatabase::removeEmployee(int index) {
-    if (index >= 0 && index < employees.size()) {
-        employees.erase(employees.begin() + index);
+bool EmployeeDatabase::removeEmployee(int index) {
+    if (index < 0 || index >= static_cast<int>(employees.size())) {
+        return false;
     }
+
+    int employeeId = employees[index].getId();
+    employees.erase(employees.begin() + index);
+
+    if (employeeId > 0 && dbConn && dbConn->isConnectedToDatabase()) {
+        if (!deleteFromDatabase(employeeId)) {
+            std::cout << "Удаление из БД завершилось с ошибкой.\n";
+        } else {
+            std::cout << "Запись удалена из БД.\n";
+        }
+    }
+
+    return true;
 }
 
-void EmployeeDatabase::editEmployee(int index) {
+bool EmployeeDatabase::editEmployee(int index) {
     if (index < 0 || index >= employees.size()) {
         std::cout << "Некорректный индекс!\n";
-        return;
+        return false;
     }
 
     Employee& emp = employees[index];
@@ -79,78 +93,129 @@ void EmployeeDatabase::editEmployee(int index) {
     std::cout << "Выбор: ";
     std::cin >> choice;
 
+    if (!std::cin) {
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout << "Некорректный ввод!\n";
+        return false;
+    }
+
+    bool modified = false;
+
+    auto ignoreLine = []() {
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    };
+
     switch (choice) {
         case 1:
             std::cout << "Введите ФИО: ";
-            std::cin.ignore(10000, '\n');
+            ignoreLine();
             std::getline(std::cin, input);
             emp.setFullName(input);
+            modified = true;
             break;
         case 2:
             std::cout << "Введите цех: ";
+            ignoreLine();
             std::getline(std::cin, input);
             emp.setWorkshop(input);
+            modified = true;
             break;
         case 3:
             std::cout << "Введите зарплату: ";
             std::cin >> doubleInput;
             emp.setSalary(doubleInput);
+            modified = true;
             break;
         case 4:
             std::cout << "Введите год рождения: ";
             std::cin >> intInput;
             emp.setBirthYear(intInput);
+            modified = true;
             break;
         case 5:
             std::cout << "Введите дату поступления (ДД.ММ.ГГГГ): ";
-            std::cin.ignore(10000, '\n');
+            ignoreLine();
             std::getline(std::cin, input);
             emp.setHireDate(input);
+            modified = true;
             break;
         case 6:
             std::cout << "Введите семейное положение: ";
-            std::cin.ignore(10000, '\n');
+            ignoreLine();
             std::getline(std::cin, input);
             emp.setMaritalStatus(input);
+            modified = true;
             break;
         case 7:
             std::cout << "Введите пол (М/Ж): ";
             std::cin >> charInput;
             emp.setGender(charInput);
+            modified = true;
             break;
         case 8:
             std::cout << "Введите количество детей: ";
             std::cin >> intInput;
             emp.setChildrenCount(intInput);
+            modified = true;
             break;
         case 9:
             std::cout << "Введите дату заболевания (ДД.ММ.ГГГГ): ";
-            std::cin.ignore(10000, '\n');
+            ignoreLine();
             std::getline(std::cin, input);
             emp.setIllnessDate(input);
+            modified = true;
             break;
         case 10:
             std::cout << "Введите дату выздоровления (ДД.ММ.ГГГГ): ";
-            std::cin.ignore(10000, '\n');
+            ignoreLine();
             std::getline(std::cin, input);
             emp.setRecoveryDate(input);
+            modified = true;
             break;
         case 11:
             std::cout << "Введите оплату по бюллетеню (%): ";
             std::cin >> doubleInput;
             emp.setBulletinPayPercent(doubleInput);
+            modified = true;
             break;
         case 12:
             std::cout << "Введите средний заработок: ";
             std::cin >> doubleInput;
             emp.setAverageEarnings(doubleInput);
+            modified = true;
             break;
         case 0:
             std::cout << "Редактирование отменено.\n";
-            break;
+            return false;
         default:
             std::cout << "Некорректный выбор!\n";
+            return false;
     }
+
+    if (!modified) {
+        return false;
+    }
+
+    std::cout << "Сотрудник успешно отредактирован!\n";
+
+    if (dbConn && dbConn->isConnectedToDatabase()) {
+        if (emp.getId() > 0) {
+            if (updateInDatabase(emp.getId(), emp)) {
+                std::cout << "Изменения сохранены в БД.\n";
+            } else {
+                std::cout << "Не удалось обновить запись в БД.\n";
+            }
+        } else {
+            if (saveToDatabase(emp)) {
+                std::cout << "Запись сохранена в БД.\n";
+            } else {
+                std::cout << "Не удалось сохранить запись в БД.\n";
+            }
+        }
+    }
+
+    return true;
 }
 
 void EmployeeDatabase::displayAll() const {
@@ -394,7 +459,7 @@ bool EmployeeDatabase::loadFromDatabase() {
     try {
         employees.clear();
         auto rows = dbConn->executeQuery(
-            "SELECT full_name, workshop, salary, birth_year, hire_date, "
+            "SELECT id, full_name, workshop, salary, birth_year, hire_date, "
             "marital_status, gender, children_count, illness_date, recovery_date, "
             "bulletin_pay_percent, average_earnings FROM employees ORDER BY id");
 
@@ -414,7 +479,8 @@ bool EmployeeDatabase::loadFromDatabase() {
                 getValue(row, "illness_date"),
                 getValue(row, "recovery_date"),
                 toDouble(getValue(row, "bulletin_pay_percent")),
-                toDouble(getValue(row, "average_earnings"))
+                toDouble(getValue(row, "average_earnings")),
+                toInt(getValue(row, "id"))
             );
 
             employees.push_back(emp);
@@ -428,7 +494,7 @@ bool EmployeeDatabase::loadFromDatabase() {
     }
 }
 
-bool EmployeeDatabase::saveToDatabase(const Employee& emp) {
+bool EmployeeDatabase::saveToDatabase(Employee& emp) {
     if (!dbConn || !dbConn->isConnectedToDatabase()) {
         std::cout << "Нет подключения к БД!\n";
         return false;
@@ -458,7 +524,19 @@ bool EmployeeDatabase::saveToDatabase(const Employee& emp) {
               << emp.getBulletinPayPercent() << ", "
               << emp.getAverageEarnings() << ")";
 
-        return dbConn->executeUpdate(query.str());
+        if (!dbConn->executeUpdate(query.str())) {
+            return false;
+        }
+
+        auto rows = dbConn->executeQuery("SELECT @@IDENTITY AS new_id");
+        if (!rows.empty()) {
+            int newId = toInt(getValue(rows[0], "new_id"));
+            if (newId > 0) {
+                emp.setId(newId);
+            }
+        }
+
+        return true;
     } catch (const std::exception& e) {
         std::cout << "Ошибка сохранения данных: " << e.what() << "\n";
         return false;

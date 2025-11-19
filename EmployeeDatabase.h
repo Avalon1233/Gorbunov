@@ -14,8 +14,8 @@ private:
 public:
     // Основные операции
     void addEmployee(const Employee& emp);
-    void removeEmployee(int index);
-    void editEmployee(int index);
+    bool removeEmployee(int index);
+    bool editEmployee(int index);
     void displayAll() const;
     void displayEmployee(int index) const;
 
@@ -57,7 +57,7 @@ public:
     // Работа с БД
     void setDatabaseConnection(std::shared_ptr<DatabaseConnection> conn);
     bool loadFromDatabase();
-    bool saveToDatabase(const Employee& emp);
+    bool saveToDatabase(Employee& emp);
     bool deleteFromDatabase(int id);
     bool updateInDatabase(int id, const Employee& emp);
 };
