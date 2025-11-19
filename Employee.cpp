@@ -1,5 +1,7 @@
 #include "Employee.h"
 #include <clocale>
+#include <locale>
+#include <cctype>
 
 Employee::Employee() 
     : id(-1), fullName(""), workshop(""), salary(0), birthYear(0), hireDate(""),
@@ -44,6 +46,61 @@ void Employee::setRecoveryDate(const std::string& recovery) { recoveryDate = rec
 void Employee::setBulletinPayPercent(double bulletinPay) { bulletinPayPercent = bulletinPay; }
 void Employee::setAverageEarnings(double avgEarn) { averageEarnings = avgEarn; }
 
+namespace {
+    std::string trim(const std::string& str) {
+        const std::string whitespace = " \t\n\r";
+        size_t start = str.find_first_not_of(whitespace);
+        if (start == std::string::npos) return "";
+        size_t end = str.find_last_not_of(whitespace);
+        return str.substr(start, end - start + 1);
+    }
+}
+
+char Employee::normalizeGenderInput(const std::string& input) {
+    std::string value = trim(input);
+    if (value.empty()) {
+        return ' ';
+    }
+
+    unsigned char first = static_cast<unsigned char>(value[0]);
+    unsigned char second = value.size() > 1 ? static_cast<unsigned char>(value[1]) : 0;
+
+    // UTF-8 sequences
+    if (first == 0xD0 && (second == 0x9C || second == 0xBC)) { // М/м
+        return 'M';
+    }
+    if ((first == 0xD0 && (second == 0x96 || second == 0xB6)) ||  // Ж/ж
+        (first == 0xD0 && (second == 0x81 || second == 0xB1))) {   // Ё как альтернатива
+        return 'F';
+    }
+
+    // CP1251 single-byte
+    if (first == 0xCC || first == 0xEC) { // М/м
+        return 'M';
+    }
+    if (first == 0xC6 || first == 0xE6) { // Ж/ж
+        return 'F';
+    }
+
+    char ascii = static_cast<char>(std::toupper(static_cast<unsigned char>(first)));
+    if (ascii == 'M') return 'M';
+    if (ascii == 'F') return 'F';
+
+    return ' ';
+}
+
+std::string Employee::genderToText(char gender) {
+    switch (gender) {
+        case 'M': return "М";
+        case 'F': return "Ж";
+        default:
+            if (gender == ' ' || gender == '\0') {
+                return "-";
+            }
+            return std::string(1, gender);
+    }
+}
+
 void Employee::display() const {
     std::cout << "\n=== Информация о сотруднике ===\n";
     if (id > 0) {
@@ -55,7 +112,7 @@ void Employee::display() const {
     std::cout << "Год рождения: " << birthYear << "\n";
     std::cout << "Дата поступления: " << hireDate << "\n";
     std::cout << "Семейное положение: " << maritalStatus << "\n";
-    std::cout << "Пол: " << gender << "\n";
+    std::cout << "Пол: " << genderToText(gender) << "\n";
     std::cout << "Количество детей: " << childrenCount << "\n";
     std::cout << "Дата заболевания: " << illnessDate << "\n";
     std::cout << "Дата выздоровления: " << recoveryDate << "\n";

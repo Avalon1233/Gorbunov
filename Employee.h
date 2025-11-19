@@ -58,6 +58,10 @@ public:
     void setBulletinPayPercent(double bulletinPay);
     void setAverageEarnings(double avgEarn);
 
+    // Утилиты по полу
+    static char normalizeGenderInput(const std::string& input);
+    static std::string genderToText(char gender);
+
     // Вывод информации
     void display() const;
 };

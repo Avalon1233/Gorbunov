@@ -142,7 +142,7 @@ void addEmployee() {
     string name, workshop, hireDate, maritalStatus, illnessDate, recoveryDate;
     double salary, bulletinPayPercent, averageEarnings;
     int birthYear, childrenCount;
-    char gender;
+    char gender = ' ';
 
     cout << "\n=== Добавление нового сотрудника ===\n";
     cout << "ФИО: ";
@@ -166,9 +166,15 @@ void addEmployee() {
     cout << "Семейное положение: ";
     getline(cin, maritalStatus);
 
-    cout << "Пол (М/Ж): ";
-    cin >> gender;
-    clearInputLine();
+    while (gender == ' ') {
+        cout << "Пол (М/Ж): ";
+        string genderInput;
+        getline(cin, genderInput);
+        gender = Employee::normalizeGenderInput(genderInput);
+        if (gender == ' ') {
+            cout << "Введите корректное значение (М или Ж).\n";
+        }
+    }
 
     cout << "Количество детей: ";
     cin >> childrenCount;
@@ -369,11 +375,15 @@ void filterMenu() {
                 break;
             }
             case 3: {
-                char gender;
+                string genderInput;
                 cout << "Введите пол (М/Ж): ";
-                cin >> gender;
-                clearInputLine();
-                auto indices = db.filterByGender(gender);
+                getline(cin, genderInput);
+                char normalized = Employee::normalizeGenderInput(genderInput);
+                if (normalized == ' ') {
+                    cout << "Некорректное значение пола!\n";
+                    break;
+                }
+                auto indices = db.filterByGender(normalized);
                 if (indices.empty()) {
                     cout << "Сотрудников с таким полом не найдено!\n";
                 } else {

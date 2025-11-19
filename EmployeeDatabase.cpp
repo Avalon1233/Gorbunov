@@ -82,7 +82,7 @@ bool EmployeeDatabase::editEmployee(int index) {
     std::string input;
     double doubleInput;
     int intInput;
-    char charInput;
+    std::string genderInput;
 
     std::cout << "\nВыберите поле для редактирования:\n";
     std::cout << "1. ФИО\n2. Цех\n3. Зарплата\n4. Год рождения\n";
@@ -147,12 +147,19 @@ bool EmployeeDatabase::editEmployee(int index) {
             emp.setMaritalStatus(input);
             modified = true;
             break;
-        case 7:
+        case 7: {
             std::cout << "Введите пол (М/Ж): ";
-            std::cin >> charInput;
-            emp.setGender(charInput);
+            ignoreLine();
+            std::getline(std::cin, genderInput);
+            char normalized = Employee::normalizeGenderInput(genderInput);
+            if (normalized == ' ') {
+                std::cout << "Пол не изменен. Допустимы значения М/Ж.\n";
+                return false;
+            }
+            emp.setGender(normalized);
             modified = true;
             break;
+        }
         case 8:
             std::cout << "Введите количество детей: ";
             std::cin >> intInput;
@@ -465,7 +472,7 @@ bool EmployeeDatabase::loadFromDatabase() {
 
         for (const auto& row : rows) {
             std::string genderStr = getValue(row, "gender");
-            char gender = genderStr.empty() ? ' ' : genderStr.front();
+            char gender = Employee::normalizeGenderInput(genderStr);
 
             Employee emp(
                 getValue(row, "full_name"),
