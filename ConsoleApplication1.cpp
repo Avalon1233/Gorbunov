@@ -458,7 +458,7 @@ void aggregateMenu() {
 }
 
 int main() {
-    setlocale(LC_ALL, "Russian");
+    setlocale(LC_ALL, "ru_RU.UTF-8");
     int choice;
 
     cout << "========================================\n";
