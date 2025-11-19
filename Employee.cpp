@@ -82,6 +82,14 @@ char Employee::normalizeGenderInput(const std::string& input) {
         return 'F';
     }
 
+    // CP866 single-byte
+    if (first == 0x8C || first == 0xAC) { // М/м
+        return 'M';
+    }
+    if (first == 0x86 || first == 0xA6) { // Ж/ж
+        return 'F';
+    }
+
     char ascii = static_cast<char>(std::toupper(static_cast<unsigned char>(first)));
     if (ascii == 'M') return 'M';
     if (ascii == 'F') return 'F';
