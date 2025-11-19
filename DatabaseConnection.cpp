@@ -252,13 +252,13 @@ void DatabaseConnection::logOdbcError(const std::string& message, SQLHANDLE hand
 
     SQLSMALLINT record = 1;
     SQLINTEGER nativeError = 0;
-    SQLCHAR sqlState[6] = {0};
-    SQLCHAR errorMsg[SQL_MAX_MESSAGE_LENGTH] = {0};
+    SQLWCHAR sqlState[6] = {0};
+    SQLWCHAR errorMsg[SQL_MAX_MESSAGE_LENGTH] = {0};
     SQLSMALLINT textLength = 0;
 
     while (SQLGetDiagRecW(type, handle, record, sqlState, &nativeError, errorMsg,
                           sizeof(errorMsg) / sizeof(SQLWCHAR), &textLength) != SQL_NO_DATA) {
-        std::cout << "SQLSTATE=" << fromWide(sqlState, 5)
+        std::cout << "SQLSTATE=" << fromWide(sqlState, SQL_NTS)
                   << " NativeError=" << nativeError
                   << " Message=" << fromWide(errorMsg, textLength) << "\n";
         ++record;
