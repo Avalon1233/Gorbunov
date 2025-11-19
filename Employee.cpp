@@ -91,8 +91,8 @@ char Employee::normalizeGenderInput(const std::string& input) {
 
 std::string Employee::genderToText(char gender) {
     switch (gender) {
-        case 'M': return "М";
-        case 'F': return "Ж";
+        case 'M': return "Мужской";
+        case 'F': return "Женский";
         default:
             if (gender == ' ' || gender == '\0') {
                 return "-";

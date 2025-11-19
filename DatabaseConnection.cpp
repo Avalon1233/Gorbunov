@@ -10,6 +10,7 @@
 
 namespace {
     constexpr SQLSMALLINT ACCESS_DRIVER_OPTION = SQL_DRIVER_NOPROMPT;
+    constexpr UINT APP_CODEPAGE = CP_UTF8;
 }
 
 DatabaseConnection::DatabaseConnection()
@@ -296,13 +297,13 @@ std::wstring DatabaseConnection::toWide(const std::string& value) {
         return std::wstring();
     }
 
-    int sizeNeeded = MultiByteToWideChar(CP_ACP, 0, value.c_str(), -1, nullptr, 0);
+    int sizeNeeded = MultiByteToWideChar(APP_CODEPAGE, 0, value.c_str(), -1, nullptr, 0);
     if (sizeNeeded <= 0) {
         return std::wstring();
     }
 
     std::wstring result(static_cast<size_t>(sizeNeeded - 1), L'\0');
-    MultiByteToWideChar(CP_ACP, 0, value.c_str(), -1, &result[0], sizeNeeded);
+    MultiByteToWideChar(APP_CODEPAGE, 0, value.c_str(), -1, &result[0], sizeNeeded);
     return result;
 }
 
@@ -322,7 +323,7 @@ std::string DatabaseConnection::fromWide(const SQLWCHAR* buffer, SQLLEN length) 
         return {};
     }
 
-    int sizeNeeded = WideCharToMultiByte(CP_ACP, 0,
+    int sizeNeeded = WideCharToMultiByte(APP_CODEPAGE, 0,
                                          reinterpret_cast<const wchar_t*>(buffer),
                                          stringLength,
                                          nullptr, 0, nullptr, nullptr);
@@ -331,7 +332,7 @@ std::string DatabaseConnection::fromWide(const SQLWCHAR* buffer, SQLLEN length) 
     }
 
     std::string result(static_cast<size_t>(sizeNeeded), '\0');
-    WideCharToMultiByte(CP_ACP, 0,
+    WideCharToMultiByte(APP_CODEPAGE, 0,
                         reinterpret_cast<const wchar_t*>(buffer),
                         stringLength,
                         &result[0], sizeNeeded,
