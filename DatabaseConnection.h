@@ -3,11 +3,12 @@
 #define NOMINMAX
 #endif
 
-#include <string>
-#include <vector>
-#include <unordered_map>
+#include <windows.h>
 #include <sql.h>
 #include <sqlext.h>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 class DatabaseConnection {
 public:
