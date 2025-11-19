@@ -1,66 +1,171 @@
 #include "DatabaseConnection.h"
+
+#include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 
-DatabaseConnection::DatabaseConnection() : isConnected(false) {}
+namespace {
+    constexpr SQLSMALLINT ACCESS_DRIVER_OPTION = SQL_DRIVER_NOPROMPT;
+}
+
+DatabaseConnection::DatabaseConnection()
+    : envHandle(SQL_NULL_HENV),
+      dbcHandle(SQL_NULL_HDBC),
+      isConnected(false) {}
 
 DatabaseConnection::~DatabaseConnection() {
     disconnect();
 }
 
-bool DatabaseConnection::connect(const std::string& host, const std::string& port,
-                                 const std::string& database, const std::string& user,
-                                 const std::string& password) {
-    try {
-        std::ostringstream connStr;
-        connStr << "host=" << host << " port=" << port << " dbname=" << database
-                << " user=" << user << " password=" << password;
-        
-        connectionString = connStr.str();
-        conn = std::make_unique<pqxx::connection>(connectionString);
-        
-        if (conn->is_open()) {
-            isConnected = true;
-            std::cout << "Успешное подключение к PostgreSQL!\n";
-            return true;
-        } else {
-            std::cout << "Ошибка подключения к БД!\n";
-            isConnected = false;
-            return false;
-        }
-    } catch (const std::exception& e) {
-        std::cout << "Ошибка подключения: " << e.what() << "\n";
-        isConnected = false;
+bool DatabaseConnection::connect(const std::string& databaseFilePath, const std::string& password) {
+    disconnect();
+
+    SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &envHandle);
+    if (!SQL_SUCCEEDED(ret)) {
+        std::cout << "Не удалось создать окружение ODBC.\n";
         return false;
     }
+
+    ret = SQLSetEnvAttr(envHandle, SQL_ATTR_ODBC_VERSION, reinterpret_cast<void*>(SQL_OV_ODBC3), 0);
+    if (!SQL_SUCCEEDED(ret)) {
+        std::cout << "Не удалось настроить окружение ODBC.\n";
+        disconnect();
+        return false;
+    }
+
+    ret = SQLAllocHandle(SQL_HANDLE_DBC, envHandle, &dbcHandle);
+    if (!SQL_SUCCEEDED(ret)) {
+        std::cout << "Не удалось создать соединение ODBC.\n";
+        disconnect();
+        return false;
+    }
+
+    std::ostringstream connStr;
+    connStr << "Driver={Microsoft Access Driver (*.mdb, *.accdb)};"
+            << "DBQ=" << databaseFilePath << ";";
+    if (!password.empty()) {
+        connStr << "PWD=" << password << ";";
+    }
+
+    std::string conn = connStr.str();
+    SQLCHAR outConnStr[1024];
+    SQLSMALLINT outConnLen = 0;
+
+    ret = SQLDriverConnect(
+        dbcHandle,
+        nullptr,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(conn.c_str())),
+        SQL_NTS,
+        outConnStr,
+        sizeof(outConnStr),
+        &outConnLen,
+        ACCESS_DRIVER_OPTION);
+
+    if (SQL_SUCCEEDED(ret)) {
+        isConnected = true;
+        databasePath = databaseFilePath;
+        std::cout << "Успешное подключение к Microsoft Access!\n";
+        return true;
+    }
+
+    logOdbcError("Ошибка подключения к Microsoft Access", dbcHandle, SQL_HANDLE_DBC);
+    disconnect();
+    return false;
 }
 
 bool DatabaseConnection::isConnectedToDatabase() const {
-    return isConnected && conn && conn->is_open();
+    return isConnected && dbcHandle != SQL_NULL_HDBC;
 }
 
 void DatabaseConnection::disconnect() {
-    if (conn && conn->is_open()) {
-        conn->disconnect();
-        isConnected = false;
+    if (dbcHandle != SQL_NULL_HDBC) {
+        SQLDisconnect(dbcHandle);
+        SQLFreeHandle(SQL_HANDLE_DBC, dbcHandle);
+        dbcHandle = SQL_NULL_HDBC;
+    }
+
+    if (envHandle != SQL_NULL_HENV) {
+        SQLFreeHandle(SQL_HANDLE_ENV, envHandle);
+        envHandle = SQL_NULL_HENV;
+    }
+
+    if (isConnected) {
         std::cout << "Отключение от БД.\n";
     }
+
+    isConnected = false;
+    databasePath.clear();
 }
 
-pqxx::result DatabaseConnection::executeQuery(const std::string& query) {
+DatabaseConnection::QueryResult DatabaseConnection::executeQuery(const std::string& query) {
     if (!isConnectedToDatabase()) {
         throw std::runtime_error("Нет подключения к БД!");
     }
-    
-    try {
-        pqxx::work txn(*conn);
-        pqxx::result res = txn.exec(query);
-        txn.commit();
-        return res;
-    } catch (const std::exception& e) {
-        std::cout << "Ошибка выполнения запроса: " << e.what() << "\n";
-        throw;
+
+    SQLHSTMT stmt = SQL_NULL_HSTMT;
+    SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, dbcHandle, &stmt);
+    if (!SQL_SUCCEEDED(ret)) {
+        throw std::runtime_error("Не удалось подготовить выражение.");
     }
+
+    ret = SQLExecDirect(stmt, const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query.c_str())), SQL_NTS);
+    if (!SQL_SUCCEEDED(ret)) {
+        logOdbcError("Ошибка выполнения запроса", stmt, SQL_HANDLE_STMT);
+        SQLFreeHandle(SQL_HANDLE_STMT, stmt);
+        throw std::runtime_error("Ошибка выполнения запроса.");
+    }
+
+    SQLSMALLINT columnCount = 0;
+    SQLNumResultCols(stmt, &columnCount);
+
+    std::vector<std::string> columnNames(columnCount);
+    for (SQLSMALLINT i = 1; i <= columnCount; ++i) {
+        SQLCHAR colName[128] = {0};
+        SQLSMALLINT nameLength = 0;
+        SQLSMALLINT dataType = 0;
+        SQLULEN colSize = 0;
+        SQLSMALLINT decimalDigits = 0;
+        SQLSMALLINT nullable = 0;
+
+        SQLDescribeCol(stmt, i, colName, sizeof(colName), &nameLength, &dataType, &colSize, &decimalDigits, &nullable);
+        columnNames[i - 1] = normalizeColumnName(reinterpret_cast<char*>(colName));
+    }
+
+    QueryResult rows;
+    const SQLSMALLINT bufferSize = 1024;
+    SQLRETURN fetchRet = SQL_NO_DATA;
+
+    while ((fetchRet = SQLFetch(stmt)) != SQL_NO_DATA) {
+        if (!SQL_SUCCEEDED(fetchRet)) {
+            logOdbcError("Ошибка чтения данных", stmt, SQL_HANDLE_STMT);
+            break;
+        }
+
+        Row row;
+        for (SQLSMALLINT i = 1; i <= columnCount; ++i) {
+            char buffer[bufferSize] = {0};
+            SQLLEN indicator = 0;
+
+            ret = SQLGetData(stmt, i, SQL_C_CHAR, buffer, bufferSize, &indicator);
+            if (SQL_SUCCEEDED(ret)) {
+                if (indicator == SQL_NULL_DATA) {
+                    row[columnNames[i - 1]] = "";
+                } else {
+                    row[columnNames[i - 1]] = buffer;
+                }
+            } else {
+                logOdbcError("Ошибка получения значения столбца", stmt, SQL_HANDLE_STMT);
+                row[columnNames[i - 1]] = "";
+            }
+        }
+
+        rows.push_back(std::move(row));
+    }
+
+    SQLFreeHandle(SQL_HANDLE_STMT, stmt);
+    return rows;
 }
 
 bool DatabaseConnection::executeUpdate(const std::string& query) {
@@ -68,16 +173,23 @@ bool DatabaseConnection::executeUpdate(const std::string& query) {
         std::cout << "Нет подключения к БД!\n";
         return false;
     }
-    
-    try {
-        pqxx::work txn(*conn);
-        txn.exec(query);
-        txn.commit();
-        return true;
-    } catch (const std::exception& e) {
-        std::cout << "Ошибка выполнения обновления: " << e.what() << "\n";
+
+    SQLHSTMT stmt = SQL_NULL_HSTMT;
+    SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, dbcHandle, &stmt);
+    if (!SQL_SUCCEEDED(ret)) {
+        std::cout << "Не удалось подготовить выражение для обновления.\n";
         return false;
     }
+
+    ret = SQLExecDirect(stmt, const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query.c_str())), SQL_NTS);
+    if (!SQL_SUCCEEDED(ret)) {
+        logOdbcError("Ошибка выполнения обновления", stmt, SQL_HANDLE_STMT);
+        SQLFreeHandle(SQL_HANDLE_STMT, stmt);
+        return false;
+    }
+
+    SQLFreeHandle(SQL_HANDLE_STMT, stmt);
+    return true;
 }
 
 bool DatabaseConnection::initializeTables() {
@@ -85,40 +197,85 @@ bool DatabaseConnection::initializeTables() {
         std::cout << "Нет подключения к БД!\n";
         return false;
     }
-    
-    try {
-        pqxx::work txn(*conn);
-        
-        // Создание таблицы employees
-        std::string createTableQuery = R"(
-            CREATE TABLE IF NOT EXISTS employees (
-                id SERIAL PRIMARY KEY,
-                full_name VARCHAR(255) NOT NULL,
-                workshop VARCHAR(255) NOT NULL,
-                salary DOUBLE PRECISION NOT NULL,
-                birth_year INTEGER NOT NULL,
-                hire_date VARCHAR(10) NOT NULL,
-                marital_status VARCHAR(50) NOT NULL,
-                gender CHAR(1) NOT NULL,
-                children_count INTEGER NOT NULL,
-                illness_date VARCHAR(10),
-                recovery_date VARCHAR(10),
-                bulletin_pay_percent DOUBLE PRECISION NOT NULL,
-                average_earnings DOUBLE PRECISION NOT NULL
-            )
-        )";
-        
-        txn.exec(createTableQuery);
-        txn.commit();
-        
-        std::cout << "Таблицы инициализированы успешно!\n";
+
+    if (tableExists("employees")) {
+        std::cout << "Таблица employees уже существует.\n";
         return true;
-    } catch (const std::exception& e) {
-        std::cout << "Ошибка инициализации таблиц: " << e.what() << "\n";
-        return false;
+    }
+
+    std::string createTableQuery = R"(
+        CREATE TABLE employees (
+            id AUTOINCREMENT PRIMARY KEY,
+            full_name TEXT(255) NOT NULL,
+            workshop TEXT(255) NOT NULL,
+            salary DOUBLE NOT NULL,
+            birth_year INTEGER NOT NULL,
+            hire_date TEXT(10) NOT NULL,
+            marital_status TEXT(50) NOT NULL,
+            gender TEXT(1) NOT NULL,
+            children_count INTEGER NOT NULL,
+            illness_date TEXT(10),
+            recovery_date TEXT(10),
+            bulletin_pay_percent DOUBLE NOT NULL,
+            average_earnings DOUBLE NOT NULL
+        )
+    )";
+
+    if (executeUpdate(createTableQuery)) {
+        std::cout << "Таблица employees создана успешно.\n";
+        return true;
+    }
+
+    std::cout << "Ошибка создания таблицы employees.\n";
+    return false;
+}
+
+std::string DatabaseConnection::normalizeColumnName(const std::string& name) {
+    std::string normalized = name;
+    std::transform(normalized.begin(), normalized.end(), normalized.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return normalized;
+}
+
+void DatabaseConnection::logOdbcError(const std::string& message, SQLHANDLE handle, SQLSMALLINT type) const {
+    std::cout << message << "\n";
+
+    SQLSMALLINT record = 1;
+    SQLINTEGER nativeError = 0;
+    SQLCHAR sqlState[6] = {0};
+    SQLCHAR errorMsg[SQL_MAX_MESSAGE_LENGTH] = {0};
+    SQLSMALLINT textLength = 0;
+
+    while (SQLGetDiagRec(type, handle, record, sqlState, &nativeError, errorMsg,
+                         sizeof(errorMsg), &textLength) != SQL_NO_DATA) {
+        std::cout << "SQLSTATE=" << sqlState
+                  << " NativeError=" << nativeError
+                  << " Message=" << errorMsg << "\n";
+        ++record;
     }
 }
 
-pqxx::connection* DatabaseConnection::getConnection() {
-    return conn.get();
+bool DatabaseConnection::tableExists(const std::string& tableName) {
+    SQLHSTMT stmt = SQL_NULL_HSTMT;
+    SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, dbcHandle, &stmt);
+    if (!SQL_SUCCEEDED(ret)) {
+        return false;
+    }
+
+    SQLCHAR tableType[] = "TABLE";
+    ret = SQLTables(stmt,
+                    nullptr, 0,
+                    nullptr, 0,
+                    reinterpret_cast<SQLCHAR*>(const_cast<char*>(tableName.c_str())), SQL_NTS,
+                    tableType, SQL_NTS);
+
+    if (!SQL_SUCCEEDED(ret)) {
+        SQLFreeHandle(SQL_HANDLE_STMT, stmt);
+        return false;
+    }
+
+    SQLRETURN fetchRet = SQLFetch(stmt);
+    bool exists = SQL_SUCCEEDED(fetchRet);
+    SQLFreeHandle(SQL_HANDLE_STMT, stmt);
+    return exists;
 }

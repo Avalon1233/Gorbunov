@@ -5,51 +5,49 @@
 #include <locale>
 #include <clocale>
 #include <memory>
+#include <filesystem>
+#include <limits>
 #include "Employee.h"
 #include "EmployeeDatabase.h"
 #include "DatabaseConnection.h"
 
 using namespace std;
+namespace fs = std::filesystem;
 
 EmployeeDatabase db;
 shared_ptr<DatabaseConnection> dbConnection;
 
 void initializeDatabase() {
     cout << "\n===== ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ =====\n";
-    cout << "Введите параметры подключения к PostgreSQL:\n";
-    
-    string host, port, database, user, password;
-    
-    cout << "Хост (по умолчанию localhost): ";
-    cin.ignore(10000, '\n');
-    getline(cin, host);
-    if (host.empty()) host = "localhost";
-    
-    cout << "Порт (по умолчанию 5432): ";
-    getline(cin, port);
-    if (port.empty()) port = "5432";
-    
-    cout << "Имя БД: ";
-    getline(cin, database);
-    if (database.empty()) {
-        cout << "Имя БД не может быть пустым!\n";
+    cout << "Работа с Microsoft Access (.mdb/.accdb)\n";
+
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+    string dbPath;
+    cout << "Укажите полный путь к файлу БД: ";
+    getline(cin, dbPath);
+
+    if (dbPath.empty()) {
+        cout << "Путь к файлу не может быть пустым!\n";
         return;
     }
-    
-    cout << "Пользователь (по умолчанию postgres): ";
-    getline(cin, user);
-    if (user.empty()) user = "postgres";
-    
-    cout << "Пароль: ";
+
+    if (!fs::exists(dbPath)) {
+        cout << "Файл БД не найден: " << dbPath << "\n";
+        return;
+    }
+
+    string password;
+    cout << "Пароль (если отсутствует, оставьте пустым): ";
     getline(cin, password);
-    
+
     dbConnection = make_shared<DatabaseConnection>();
     
-    if (dbConnection->connect(host, port, database, user, password)) {
+    if (dbConnection->connect(dbPath, password)) {
         if (dbConnection->initializeTables()) {
             db.setDatabaseConnection(dbConnection);
             db.loadFromDatabase();
-            cout << "Успешное подключение и инициализация БД!\n";
+            cout << "Успешное подключение и инициализация БД Access!\n";
         } else {
             cout << "Ошибка инициализации таблиц!\n";
         }
@@ -67,7 +65,7 @@ void displayMainMenu() {
     cout << "4. Поиск\n";
     cout << "5. Агрегирующие запросы\n";
     cout << "6. Просмотр всех сотрудников\n";
-    cout << "7. Подключение к БД PostgreSQL\n";
+    cout << "7. Подключение к БД Microsoft Access\n";
     cout << "0. Выход\n";
     cout << "==================================\n";
     if (dbConnection && dbConnection->isConnectedToDatabase()) {

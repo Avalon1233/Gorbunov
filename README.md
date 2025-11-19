@@ -63,7 +63,7 @@
 
 ## Компиляция и запуск
 
-### С использованием CMake (рекомендуется для PostgreSQL)
+### С использованием CMake (рекомендуется)
 ```bash
 mkdir build
 cd build
@@ -75,22 +75,22 @@ cmake --build . --config Release
 ### В Visual Studio
 1. Откройте решение ConsoleApplication1.sln
 2. Убедитесь, что все файлы (.h и .cpp) добавлены в проект
-3. Добавьте включение libpqxx и PostgreSQL
+3. Добавьте ссылку на библиотеку `odbc32.lib` (для работы с Access)
 4. Нажмите Ctrl+F5 для запуска без отладки или F5 для запуска с отладкой
 
 ### Из командной строки (g++)
 ```bash
-g++ -std=c++17 -o app ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp DatabaseConnection.cpp -lpqxx -lpq
+g++ -std=c++17 -o app ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp DatabaseConnection.cpp -lodbc32
 ./app
 ```
 
 ### Из командной строки (MSVC)
 ```bash
-cl /std:c++17 ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp DatabaseConnection.cpp /link libpq.lib
+cl /std:c++17 ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp DatabaseConnection.cpp /link odbc32.lib
 ConsoleApplication1.exe
 ```
 
-**Примечание:** Для работы с PostgreSQL необходимо установить libpqxx. Подробнее см. в файле SETUP.md
+**Примечание:** Для работы с Microsoft Access необходим установленный ODBC-драйвер Access Database Engine. Подробности см. в файле SETUP.md.
 
 ## Использование
 
@@ -104,6 +104,7 @@ ConsoleApplication1.exe
 4. Поиск
 5. Агрегирующие запросы
 6. Просмотр всех сотрудников
+7. Подключение к БД Microsoft Access
 0. Выход
 ```
 
@@ -133,7 +134,7 @@ ConsoleApplication1.exe
 3. Будет выведен результат
 
 ## Требования
-- C++ 11 или выше
+- C++ 17 или выше
 - Компилятор: Visual Studio, g++, clang или другой совместимый компилятор
 - Поддержка русского языка (setlocale)
 

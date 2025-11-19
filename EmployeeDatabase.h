@@ -10,7 +10,6 @@ class EmployeeDatabase {
 private:
     std::vector<Employee> employees;
     std::shared_ptr<DatabaseConnection> dbConn;
-    bool useDatabase;
 
 public:
     // Основные операции

@@ -5,10 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Поиск пакетов
-find_package(PostgreSQL REQUIRED)
-
-# Включение директорий
-include_directories(${PostgreSQL_INCLUDE_DIRS})
+find_package(ODBC REQUIRED)
 
 # Исходные файлы
 set(SOURCES
@@ -21,8 +18,8 @@ set(SOURCES
 # Создание исполняемого файла
 add_executable(employee_app ${SOURCES})
 
-# Связывание с библиотеками PostgreSQL
-target_link_libraries(employee_app ${PostgreSQL_LIBRARIES})
+# Связывание с библиотеками ODBC
+target_link_libraries(employee_app PRIVATE ODBC::ODBC)
 
 # Для Windows с MSVC
 if(MSVC)

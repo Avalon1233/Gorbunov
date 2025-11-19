@@ -1,34 +1,39 @@
 #pragma once
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #include <string>
 #include <vector>
-#include <memory>
-#include <pqxx/pqxx>
+#include <unordered_map>
+#include <sql.h>
+#include <sqlext.h>
 
 class DatabaseConnection {
+public:
+    using Row = std::unordered_map<std::string, std::string>;
+    using QueryResult = std::vector<Row>;
+
 private:
-    std::unique_ptr<pqxx::connection> conn;
-    std::string connectionString;
+    SQLHENV envHandle;
+    SQLHDBC dbcHandle;
     bool isConnected;
+    std::string databasePath;
+
+    static std::string normalizeColumnName(const std::string& name);
+    void logOdbcError(const std::string& message, SQLHANDLE handle, SQLSMALLINT type) const;
+    bool tableExists(const std::string& tableName);
 
 public:
     DatabaseConnection();
     ~DatabaseConnection();
 
-    // Подключение к БД
-    bool connect(const std::string& host, const std::string& port, 
-                 const std::string& database, const std::string& user, 
-                 const std::string& password);
-    
+    bool connect(const std::string& databaseFilePath, const std::string& password = "");
     bool isConnectedToDatabase() const;
     void disconnect();
 
-    // Выполнение запросов
-    pqxx::result executeQuery(const std::string& query);
+    QueryResult executeQuery(const std::string& query);
     bool executeUpdate(const std::string& query);
 
-    // Инициализация таблиц
     bool initializeTables();
-
-    // Получение соединения
-    pqxx::connection* getConnection();
 };

@@ -1,150 +1,90 @@
-# Установка и компиляция проекта с PostgreSQL
+# Установка и компиляция проекта с Microsoft Access
 
 ## Требования
+- Windows 10/11
 - C++ 17 или выше
-- PostgreSQL 10+
+- Microsoft Access Database Engine 2016 (ODBC-драйвер)
 - CMake 3.10+
-- Компилятор (Visual Studio, g++, clang)
+- Компилятор (Visual Studio/MSVC или MinGW g++)
 
 ## Установка зависимостей
 
-### Windows (Visual Studio)
+### 1. Microsoft Access Database Engine
+1. Скачайте `AccessDatabaseEngine_X64.exe` (или X86) с официального сайта Microsoft.
+2. Установите драйвер. После установки в системе появится ODBC-драйвер `Microsoft Access Driver (*.mdb, *.accdb)`.
+3. Перезагрузите компьютер (рекомендуется), чтобы драйвер стал доступен компилятору.
 
-1. **Установите PostgreSQL:**
-   - Скачайте установщик с https://www.postgresql.org/download/windows/
-   - Установите PostgreSQL с полной поддержкой разработки
+### 2. CMake
+- Скачайте с https://cmake.org/download/ и установите.
 
-2. **Установите libpqxx (C++ драйвер для PostgreSQL):**
-   ```bash
-   # Через vcpkg (рекомендуется)
-   vcpkg install libpqxx:x64-windows
-   
-   # Или скачайте с https://github.com/jtv/libpqxx
-   ```
-
-3. **Установите CMake:**
-   - Скачайте с https://cmake.org/download/
-
-### Linux (Ubuntu/Debian)
-
-```bash
-# Установка PostgreSQL
-sudo apt-get install postgresql postgresql-contrib libpq-dev
-
-# Установка libpqxx
-sudo apt-get install libpqxx-dev
-
-# Установка CMake
-sudo apt-get install cmake
-```
-
-### macOS
-
-```bash
-# Установка через Homebrew
-brew install postgresql libpqxx cmake
-```
+### 3. Компилятор
+- **Visual Studio**: установите рабочую нагрузку "Разработка классических приложений на C++".
+- **MinGW-w64**: установите сборку с поддержкой C++17 и добавьте `g++.exe` в `PATH`.
 
 ## Компиляция
 
-### Способ 1: С использованием CMake (рекомендуется)
-
+### Способ 1: CMake (рекомендуется)
 ```bash
-# Создайте директорию для сборки
 mkdir build
 cd build
-
-# Сгенерируйте файлы сборки
 cmake ..
-
-# Скомпилируйте проект
 cmake --build . --config Release
-
-# Запустите приложение
-./employee_app  # Linux/macOS
-employee_app.exe  # Windows
+./employee_app.exe   # Windows
 ```
 
-### Способ 2: Прямая компиляция (g++)
-
+### Способ 2: Прямая компиляция (MinGW g++)
 ```bash
-g++ -std=c++17 -o employee_app \
-    ConsoleApplication1.cpp \
-    Employee.cpp \
-    EmployeeDatabase.cpp \
-    DatabaseConnection.cpp \
-    -I/usr/include/pqxx \
-    -I/usr/include/postgresql \
-    -lpqxx -lpq
+g++ -std=c++17 -O2 -Wall ^
+    ConsoleApplication1.cpp ^
+    Employee.cpp ^
+    EmployeeDatabase.cpp ^
+    DatabaseConnection.cpp ^
+    -lodbc32 ^
+    -o employee_app.exe
 ```
 
-### Способ 3: Visual Studio (MSVC)
-
+### Способ 3: MSVC (cl)
 ```bash
 cl /std:c++17 /EHsc ^
     ConsoleApplication1.cpp ^
     Employee.cpp ^
     EmployeeDatabase.cpp ^
     DatabaseConnection.cpp ^
-    /I"C:\Program Files\PostgreSQL\15\include" ^
-    /link "C:\Program Files\PostgreSQL\15\lib\libpq.lib"
+    /link odbc32.lib
 ```
 
-## Подготовка базы данных
+## Подготовка базы данных Access
+1. Создайте пустой файл `employees.accdb` (можно в Microsoft Access: File → New → Blank Database).
+2. Сохраните файл в удобной директории, например `C:\Data\employees.accdb`.
+3. Если необходимо, установите пароль на файл (он будет вводиться при подключении).
 
-1. **Создайте базу данных:**
-   ```sql
-   CREATE DATABASE employees_db;
-   ```
-
-2. **Подключитесь к БД:**
-   ```bash
-   psql -U postgres -d employees_db
-   ```
-
-3. **При первом запуске приложения:**
-   - Выберите пункт "7. Подключение к БД PostgreSQL"
-   - Введите параметры подключения:
-     - Хост: localhost
-     - Порт: 5432
-     - Имя БД: employees_db
-     - Пользователь: postgres
-     - Пароль: (ваш пароль)
-
-## Использование
-
-После компиляции и запуска приложения:
-
-1. Выберите "7. Подключение к БД PostgreSQL" для подключения
-2. Добавляйте, редактируйте и удаляйте сотрудников
-3. Все изменения будут автоматически сохраняться в PostgreSQL
-4. При перезапуске приложения данные будут загружены из БД
+## Подключение внутри приложения
+1. Запустите программу и выберите пункт `7. Подключение к БД Microsoft Access`.
+2. Укажите полный путь к файлу `.accdb`/`.mdb`.
+3. Введите пароль (или оставьте поле пустым).
+4. Приложение автоматически создаст таблицу `employees`, если она отсутствует.
 
 ## Решение проблем
 
-### Ошибка: "Cannot find PostgreSQL"
-- Убедитесь, что PostgreSQL установлен
-- Проверьте переменные окружения PATH
-- На Windows добавьте путь к PostgreSQL в PATH
+### Ошибка: "Microsoft Access Driver (*.mdb, *.accdb) not found"
+- Проверьте, установлен ли Access Database Engine.
+- Убедитесь, что разрядность драйвера совпадает с компилятором (x86/x64).
 
-### Ошибка: "libpqxx not found"
-- Переустановите libpqxx
-- Проверьте пути включения в CMakeLists.txt
+### Ошибка: "Не удалось открыть файл БД"
+- Проверьте путь к файлу и наличие доступа (файл не должен быть открыт в Access).
+- Убедитесь, что у вас есть права записи в каталог с БД.
 
-### Ошибка подключения к БД
-- Проверьте, что PostgreSQL запущен
-- Проверьте параметры подключения
-- Убедитесь, что база данных существует
-- Проверьте права доступа пользователя
+### Ошибка: "Operation must use an updateable query"
+- Убедитесь, что файл БД расположен в каталоге с правом записи (не Program Files).
 
 ## Структура проекта
 
 ```
 Gorbunov/
-├── CMakeLists.txt              # Конфигурация CMake
+├── CMakeLists.txt              # Конфигурация CMake (ODBC)
 ├── SETUP.md                    # Этот файл
 ├── Employee.h / .cpp           # Класс сотрудника
-├── EmployeeDatabase.h / .cpp   # Управление БД (в памяти + PostgreSQL)
-├── DatabaseConnection.h / .cpp # Подключение к PostgreSQL
+├── EmployeeDatabase.h / .cpp   # Управление БД (в памяти + Access)
+├── DatabaseConnection.h / .cpp # ODBC-подключение к Access
 └── ConsoleApplication1.cpp     # Главное приложение
 ```
