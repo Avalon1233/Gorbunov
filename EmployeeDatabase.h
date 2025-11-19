@@ -2,6 +2,7 @@
 #include "Employee.h"
 #include <vector>
 #include <algorithm>
+#include <clocale>
 
 class EmployeeDatabase {
 private:

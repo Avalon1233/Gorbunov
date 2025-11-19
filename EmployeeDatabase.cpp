@@ -1,6 +1,7 @@
 #include "EmployeeDatabase.h"
 #include <iostream>
 #include <iomanip>
+#include <clocale>
 
 void EmployeeDatabase::addEmployee(const Employee& emp) {
     employees.push_back(emp);

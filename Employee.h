@@ -2,6 +2,7 @@
 #include <string>
 #include <iostream>
 #include <ctime>
+#include <clocale>
 
 class Employee {
 private:

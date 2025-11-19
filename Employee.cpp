@@ -1,4 +1,5 @@
 #include "Employee.h"
+#include <clocale>
 
 Employee::Employee() 
     : fullName(""), workshop(""), salary(0), birthYear(0), hireDate(""),
