@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iomanip>
 #include <clocale>
+#include <sstream>
 
 void EmployeeDatabase::addEmployee(const Employee& emp) {
     employees.push_back(emp);
@@ -34,11 +35,11 @@ void EmployeeDatabase::editEmployee(int index) {
     std::cout << "0. Отмена\n";
     std::cout << "Выбор: ";
     std::cin >> choice;
-    std::cin.ignore();
 
     switch (choice) {
         case 1:
             std::cout << "Введите ФИО: ";
+            std::cin.ignore(10000, '\n');
             std::getline(std::cin, input);
             emp.setFullName(input);
             break;
@@ -59,12 +60,13 @@ void EmployeeDatabase::editEmployee(int index) {
             break;
         case 5:
             std::cout << "Введите дату поступления (ДД.ММ.ГГГГ): ";
-            std::cin.ignore();
+            std::cin.ignore(10000, '\n');
             std::getline(std::cin, input);
             emp.setHireDate(input);
             break;
         case 6:
             std::cout << "Введите семейное положение: ";
+            std::cin.ignore(10000, '\n');
             std::getline(std::cin, input);
             emp.setMaritalStatus(input);
             break;
@@ -80,13 +82,13 @@ void EmployeeDatabase::editEmployee(int index) {
             break;
         case 9:
             std::cout << "Введите дату заболевания (ДД.ММ.ГГГГ): ";
-            std::cin.ignore();
+            std::cin.ignore(10000, '\n');
             std::getline(std::cin, input);
             emp.setIllnessDate(input);
             break;
         case 10:
             std::cout << "Введите дату выздоровления (ДД.ММ.ГГГГ): ";
-            std::cin.ignore();
+            std::cin.ignore(10000, '\n');
             std::getline(std::cin, input);
             emp.setRecoveryDate(input);
             break;
@@ -333,4 +335,123 @@ Employee& EmployeeDatabase::getEmployee(int index) {
 
 const Employee& EmployeeDatabase::getEmployeeConst(int index) const {
     return employees[index];
+}
+
+// Работа с БД
+void EmployeeDatabase::setDatabaseConnection(std::shared_ptr<DatabaseConnection> conn) {
+    dbConn = conn;
+    useDatabase = (dbConn != nullptr && dbConn->isConnectedToDatabase());
+}
+
+bool EmployeeDatabase::loadFromDatabase() {
+    if (!dbConn || !dbConn->isConnectedToDatabase()) {
+        std::cout << "Нет подключения к БД!\n";
+        return false;
+    }
+
+    try {
+        employees.clear();
+        pqxx::result res = dbConn->executeQuery("SELECT * FROM employees ORDER BY id");
+        
+        for (auto row : res) {
+            Employee emp(
+                row["full_name"].as<std::string>(),
+                row["workshop"].as<std::string>(),
+                row["salary"].as<double>(),
+                row["birth_year"].as<int>(),
+                row["hire_date"].as<std::string>(),
+                row["marital_status"].as<std::string>(),
+                row["gender"].as<char>(),
+                row["children_count"].as<int>(),
+                row["illness_date"].as<std::string>(),
+                row["recovery_date"].as<std::string>(),
+                row["bulletin_pay_percent"].as<double>(),
+                row["average_earnings"].as<double>()
+            );
+            employees.push_back(emp);
+        }
+        
+        std::cout << "Данные загружены из БД. Всего сотрудников: " << employees.size() << "\n";
+        return true;
+    } catch (const std::exception& e) {
+        std::cout << "Ошибка загрузки данных: " << e.what() << "\n";
+        return false;
+    }
+}
+
+bool EmployeeDatabase::saveToDatabase(const Employee& emp) {
+    if (!dbConn || !dbConn->isConnectedToDatabase()) {
+        std::cout << "Нет подключения к БД!\n";
+        return false;
+    }
+
+    try {
+        std::ostringstream query;
+        query << "INSERT INTO employees (full_name, workshop, salary, birth_year, "
+              << "hire_date, marital_status, gender, children_count, illness_date, "
+              << "recovery_date, bulletin_pay_percent, average_earnings) VALUES ("
+              << "'" << emp.getFullName() << "', "
+              << "'" << emp.getWorkshop() << "', "
+              << emp.getSalary() << ", "
+              << emp.getBirthYear() << ", "
+              << "'" << emp.getHireDate() << "', "
+              << "'" << emp.getMaritalStatus() << "', "
+              << "'" << emp.getGender() << "', "
+              << emp.getChildrenCount() << ", "
+              << "'" << emp.getIllnessDate() << "', "
+              << "'" << emp.getRecoveryDate() << "', "
+              << emp.getBulletinPayPercent() << ", "
+              << emp.getAverageEarnings() << ")";
+        
+        return dbConn->executeUpdate(query.str());
+    } catch (const std::exception& e) {
+        std::cout << "Ошибка сохранения данных: " << e.what() << "\n";
+        return false;
+    }
+}
+
+bool EmployeeDatabase::deleteFromDatabase(int id) {
+    if (!dbConn || !dbConn->isConnectedToDatabase()) {
+        std::cout << "Нет подключения к БД!\n";
+        return false;
+    }
+
+    try {
+        std::ostringstream query;
+        query << "DELETE FROM employees WHERE id = " << id;
+        return dbConn->executeUpdate(query.str());
+    } catch (const std::exception& e) {
+        std::cout << "Ошибка удаления данных: " << e.what() << "\n";
+        return false;
+    }
+}
+
+bool EmployeeDatabase::updateInDatabase(int id, const Employee& emp) {
+    if (!dbConn || !dbConn->isConnectedToDatabase()) {
+        std::cout << "Нет подключения к БД!\n";
+        return false;
+    }
+
+    try {
+        std::ostringstream query;
+        query << "UPDATE employees SET "
+              << "full_name = '" << emp.getFullName() << "', "
+              << "workshop = '" << emp.getWorkshop() << "', "
+              << "salary = " << emp.getSalary() << ", "
+              << "birth_year = " << emp.getBirthYear() << ", "
+              << "hire_date = '" << emp.getHireDate() << "', "
+              << "marital_status = '" << emp.getMaritalStatus() << "', "
+              << "gender = '" << emp.getGender() << "', "
+              << "children_count = " << emp.getChildrenCount() << ", "
+              << "illness_date = '" << emp.getIllnessDate() << "', "
+              << "recovery_date = '" << emp.getRecoveryDate() << "', "
+              << "bulletin_pay_percent = " << emp.getBulletinPayPercent() << ", "
+              << "average_earnings = " << emp.getAverageEarnings() << " "
+              << "WHERE id = " << id;
+        
+        return dbConn->executeUpdate(query.str());
+    } catch (const std::exception& e) {
+        std::cout << "Ошибка обновления данных: " << e.what() << "\n";
+        return false;
+    }
 }

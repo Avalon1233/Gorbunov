@@ -63,22 +63,34 @@
 
 ## Компиляция и запуск
 
+### С использованием CMake (рекомендуется для PostgreSQL)
+```bash
+mkdir build
+cd build
+cmake ..
+cmake --build . --config Release
+./employee_app
+```
+
 ### В Visual Studio
 1. Откройте решение ConsoleApplication1.sln
 2. Убедитесь, что все файлы (.h и .cpp) добавлены в проект
-3. Нажмите Ctrl+F5 для запуска без отладки или F5 для запуска с отладкой
+3. Добавьте включение libpqxx и PostgreSQL
+4. Нажмите Ctrl+F5 для запуска без отладки или F5 для запуска с отладкой
 
 ### Из командной строки (g++)
 ```bash
-g++ -o app ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp -std=c++11
+g++ -std=c++17 -o app ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp DatabaseConnection.cpp -lpqxx -lpq
 ./app
 ```
 
 ### Из командной строки (MSVC)
 ```bash
-cl ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp
+cl /std:c++17 ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp DatabaseConnection.cpp /link libpq.lib
 ConsoleApplication1.exe
 ```
+
+**Примечание:** Для работы с PostgreSQL необходимо установить libpqxx. Подробнее см. в файле SETUP.md
 
 ## Использование
 
