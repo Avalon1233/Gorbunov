@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 #include <iomanip>
+#include <locale>
+#include <clocale>
 #include "Employee.h"
 #include "EmployeeDatabase.h"
 
