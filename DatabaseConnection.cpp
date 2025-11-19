@@ -10,7 +10,7 @@
 
 namespace {
     constexpr SQLSMALLINT ACCESS_DRIVER_OPTION = SQL_DRIVER_NOPROMPT;
-    constexpr UINT APP_CODEPAGE = CP_UTF8;
+    constexpr UINT APP_CODEPAGE = CP_ACP;
 }
 
 DatabaseConnection::DatabaseConnection()
