@@ -22,6 +22,8 @@ private:
     std::string databasePath;
 
     static std::string normalizeColumnName(const std::string& name);
+    static std::wstring toWide(const std::string& value);
+    static std::string fromWide(const SQLWCHAR* buffer, SQLLEN length);
     void logOdbcError(const std::string& message, SQLHANDLE handle, SQLSMALLINT type) const;
     bool tableExists(const std::string& tableName);
 

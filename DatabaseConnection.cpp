@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cwchar>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <vector>
 
 namespace {
     constexpr SQLSMALLINT ACCESS_DRIVER_OPTION = SQL_DRIVER_NOPROMPT;
@@ -42,21 +44,21 @@ bool DatabaseConnection::connect(const std::string& databaseFilePath, const std:
         return false;
     }
 
-    std::ostringstream connStr;
-    connStr << "Driver={Microsoft Access Driver (*.mdb, *.accdb)};"
-            << "DBQ=" << databaseFilePath << ";";
+    std::wostringstream connStr;
+    connStr << L"Driver={Microsoft Access Driver (*.mdb, *.accdb)};"
+            << L"DBQ=" << toWide(databaseFilePath) << L";";
     if (!password.empty()) {
-        connStr << "PWD=" << password << ";";
+        connStr << L"PWD=" << toWide(password) << L";";
     }
 
-    std::string conn = connStr.str();
-    SQLCHAR outConnStr[1024];
+    std::wstring conn = connStr.str();
+    SQLWCHAR outConnStr[1024];
     SQLSMALLINT outConnLen = 0;
 
-    ret = SQLDriverConnectA(
+    ret = SQLDriverConnectW(
         dbcHandle,
         nullptr,
-        reinterpret_cast<SQLCHAR*>(conn.data()),
+        reinterpret_cast<SQLWCHAR*>(const_cast<wchar_t*>(conn.c_str())),
         SQL_NTS,
         outConnStr,
         sizeof(outConnStr),
@@ -110,7 +112,8 @@ DatabaseConnection::QueryResult DatabaseConnection::executeQuery(const std::stri
         throw std::runtime_error("Не удалось подготовить выражение.");
     }
 
-    ret = SQLExecDirectA(stmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(query.c_str())), SQL_NTS);
+    std::wstring queryW = toWide(query);
+    ret = SQLExecDirectW(stmt, reinterpret_cast<SQLWCHAR*>(const_cast<wchar_t*>(queryW.c_str())), SQL_NTS);
     if (!SQL_SUCCEEDED(ret)) {
         logOdbcError("Ошибка выполнения запроса", stmt, SQL_HANDLE_STMT);
         SQLFreeHandle(SQL_HANDLE_STMT, stmt);
@@ -122,15 +125,15 @@ DatabaseConnection::QueryResult DatabaseConnection::executeQuery(const std::stri
 
     std::vector<std::string> columnNames(columnCount);
     for (SQLSMALLINT i = 1; i <= columnCount; ++i) {
-        SQLCHAR colName[128] = {0};
+        SQLWCHAR colName[128] = {0};
         SQLSMALLINT nameLength = 0;
         SQLSMALLINT dataType = 0;
         SQLULEN colSize = 0;
         SQLSMALLINT decimalDigits = 0;
         SQLSMALLINT nullable = 0;
 
-        SQLDescribeColA(stmt, i, colName, sizeof(colName), &nameLength, &dataType, &colSize, &decimalDigits, &nullable);
-        columnNames[i - 1] = normalizeColumnName(reinterpret_cast<char*>(colName));
+        SQLDescribeColW(stmt, i, colName, sizeof(colName), &nameLength, &dataType, &colSize, &decimalDigits, &nullable);
+        columnNames[i - 1] = normalizeColumnName(fromWide(colName, nameLength));
     }
 
     QueryResult rows;
@@ -145,15 +148,21 @@ DatabaseConnection::QueryResult DatabaseConnection::executeQuery(const std::stri
 
         Row row;
         for (SQLSMALLINT i = 1; i <= columnCount; ++i) {
-            char buffer[bufferSize] = {0};
+            SQLWCHAR buffer[bufferSize] = {0};
             SQLLEN indicator = 0;
 
-            ret = SQLGetData(stmt, i, SQL_C_CHAR, buffer, bufferSize, &indicator);
+            ret = SQLGetData(stmt, i, SQL_C_WCHAR, buffer, sizeof(buffer), &indicator);
             if (SQL_SUCCEEDED(ret)) {
                 if (indicator == SQL_NULL_DATA) {
                     row[columnNames[i - 1]] = "";
                 } else {
-                    row[columnNames[i - 1]] = buffer;
+                    SQLLEN charCount = indicator;
+                    if (indicator == SQL_NTS || indicator == SQL_NO_TOTAL) {
+                        charCount = SQL_NTS;
+                    } else if (indicator > 0) {
+                        charCount = indicator / sizeof(SQLWCHAR);
+                    }
+                    row[columnNames[i - 1]] = fromWide(buffer, charCount);
                 }
             } else {
                 logOdbcError("Ошибка получения значения столбца", stmt, SQL_HANDLE_STMT);
@@ -181,7 +190,8 @@ bool DatabaseConnection::executeUpdate(const std::string& query) {
         return false;
     }
 
-    ret = SQLExecDirectA(stmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(query.c_str())), SQL_NTS);
+    std::wstring queryW = toWide(query);
+    ret = SQLExecDirectW(stmt, reinterpret_cast<SQLWCHAR*>(const_cast<wchar_t*>(queryW.c_str())), SQL_NTS);
     if (!SQL_SUCCEEDED(ret)) {
         logOdbcError("Ошибка выполнения обновления", stmt, SQL_HANDLE_STMT);
         SQLFreeHandle(SQL_HANDLE_STMT, stmt);
@@ -246,11 +256,11 @@ void DatabaseConnection::logOdbcError(const std::string& message, SQLHANDLE hand
     SQLCHAR errorMsg[SQL_MAX_MESSAGE_LENGTH] = {0};
     SQLSMALLINT textLength = 0;
 
-    while (SQLGetDiagRecA(type, handle, record, sqlState, &nativeError, errorMsg,
-                          sizeof(errorMsg), &textLength) != SQL_NO_DATA) {
-        std::cout << "SQLSTATE=" << sqlState
+    while (SQLGetDiagRecW(type, handle, record, sqlState, &nativeError, errorMsg,
+                          sizeof(errorMsg) / sizeof(SQLWCHAR), &textLength) != SQL_NO_DATA) {
+        std::cout << "SQLSTATE=" << fromWide(sqlState, 5)
                   << " NativeError=" << nativeError
-                  << " Message=" << errorMsg << "\n";
+                  << " Message=" << fromWide(errorMsg, textLength) << "\n";
         ++record;
     }
 }
@@ -262,11 +272,12 @@ bool DatabaseConnection::tableExists(const std::string& tableName) {
         return false;
     }
 
-    SQLCHAR tableType[] = "TABLE";
-    ret = SQLTablesA(stmt,
+    SQLWCHAR tableType[] = L"TABLE";
+    std::wstring tableNameW = toWide(tableName);
+    ret = SQLTablesW(stmt,
                      nullptr, 0,
                      nullptr, 0,
-                     reinterpret_cast<SQLCHAR*>(const_cast<char*>(tableName.c_str())), SQL_NTS,
+                     reinterpret_cast<SQLWCHAR*>(const_cast<wchar_t*>(tableNameW.c_str())), SQL_NTS,
                      tableType, SQL_NTS);
 
     if (!SQL_SUCCEEDED(ret)) {
@@ -278,4 +289,52 @@ bool DatabaseConnection::tableExists(const std::string& tableName) {
     bool exists = SQL_SUCCEEDED(fetchRet);
     SQLFreeHandle(SQL_HANDLE_STMT, stmt);
     return exists;
+}
+
+std::wstring DatabaseConnection::toWide(const std::string& value) {
+    if (value.empty()) {
+        return std::wstring();
+    }
+
+    int sizeNeeded = MultiByteToWideChar(CP_ACP, 0, value.c_str(), -1, nullptr, 0);
+    if (sizeNeeded <= 0) {
+        return std::wstring();
+    }
+
+    std::wstring result(static_cast<size_t>(sizeNeeded - 1), L'\0');
+    MultiByteToWideChar(CP_ACP, 0, value.c_str(), -1, &result[0], sizeNeeded);
+    return result;
+}
+
+std::string DatabaseConnection::fromWide(const SQLWCHAR* buffer, SQLLEN length) {
+    if (!buffer) {
+        return {};
+    }
+
+    int stringLength = 0;
+    if (length == SQL_NTS) {
+        stringLength = static_cast<int>(wcslen(reinterpret_cast<const wchar_t*>(buffer)));
+    } else if (length > 0) {
+        stringLength = static_cast<int>(length);
+    }
+
+    if (stringLength == 0) {
+        return {};
+    }
+
+    int sizeNeeded = WideCharToMultiByte(CP_ACP, 0,
+                                         reinterpret_cast<const wchar_t*>(buffer),
+                                         stringLength,
+                                         nullptr, 0, nullptr, nullptr);
+    if (sizeNeeded <= 0) {
+        return {};
+    }
+
+    std::string result(static_cast<size_t>(sizeNeeded), '\0');
+    WideCharToMultiByte(CP_ACP, 0,
+                        reinterpret_cast<const wchar_t*>(buffer),
+                        stringLength,
+                        &result[0], sizeNeeded,
+                        nullptr, nullptr);
+    return result;
 }
