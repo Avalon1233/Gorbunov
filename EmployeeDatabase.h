@@ -1,12 +1,16 @@
 #pragma once
 #include "Employee.h"
+#include "DatabaseConnection.h"
 #include <vector>
 #include <algorithm>
 #include <clocale>
+#include <memory>
 
 class EmployeeDatabase {
 private:
     std::vector<Employee> employees;
+    std::shared_ptr<DatabaseConnection> dbConn;
+    bool useDatabase;
 
 public:
     // Основные операции
@@ -50,4 +54,11 @@ public:
     void clear();
     Employee& getEmployee(int index);
     const Employee& getEmployeeConst(int index) const;
+
+    // Работа с БД
+    void setDatabaseConnection(std::shared_ptr<DatabaseConnection> conn);
+    bool loadFromDatabase();
+    bool saveToDatabase(const Employee& emp);
+    bool deleteFromDatabase(int id);
+    bool updateInDatabase(int id, const Employee& emp);
 };

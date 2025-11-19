@@ -4,12 +4,60 @@
 #include <iomanip>
 #include <locale>
 #include <clocale>
+#include <memory>
 #include "Employee.h"
 #include "EmployeeDatabase.h"
+#include "DatabaseConnection.h"
 
 using namespace std;
 
 EmployeeDatabase db;
+shared_ptr<DatabaseConnection> dbConnection;
+
+void initializeDatabase() {
+    cout << "\n===== ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ =====\n";
+    cout << "Введите параметры подключения к PostgreSQL:\n";
+    
+    string host, port, database, user, password;
+    
+    cout << "Хост (по умолчанию localhost): ";
+    cin.ignore(10000, '\n');
+    getline(cin, host);
+    if (host.empty()) host = "localhost";
+    
+    cout << "Порт (по умолчанию 5432): ";
+    getline(cin, port);
+    if (port.empty()) port = "5432";
+    
+    cout << "Имя БД: ";
+    getline(cin, database);
+    if (database.empty()) {
+        cout << "Имя БД не может быть пустым!\n";
+        return;
+    }
+    
+    cout << "Пользователь (по умолчанию postgres): ";
+    getline(cin, user);
+    if (user.empty()) user = "postgres";
+    
+    cout << "Пароль: ";
+    getline(cin, password);
+    
+    dbConnection = make_shared<DatabaseConnection>();
+    
+    if (dbConnection->connect(host, port, database, user, password)) {
+        if (dbConnection->initializeTables()) {
+            db.setDatabaseConnection(dbConnection);
+            db.loadFromDatabase();
+            cout << "Успешное подключение и инициализация БД!\n";
+        } else {
+            cout << "Ошибка инициализации таблиц!\n";
+        }
+    } else {
+        cout << "Ошибка подключения к БД!\n";
+        dbConnection = nullptr;
+    }
+}
 
 void displayMainMenu() {
     cout << "\n========== ГЛАВНОЕ МЕНЮ ==========\n";
@@ -19,8 +67,12 @@ void displayMainMenu() {
     cout << "4. Поиск\n";
     cout << "5. Агрегирующие запросы\n";
     cout << "6. Просмотр всех сотрудников\n";
+    cout << "7. Подключение к БД PostgreSQL\n";
     cout << "0. Выход\n";
     cout << "==================================\n";
+    if (dbConnection && dbConnection->isConnectedToDatabase()) {
+        cout << "[БД подключена]\n";
+    }
     cout << "Выбор: ";
 }
 
@@ -92,10 +144,11 @@ void addEmployee() {
 
     cout << "\n=== Добавление нового сотрудника ===\n";
     cout << "ФИО: ";
-    cin.ignore();
+    cin.ignore(10000, '\n');
     getline(cin, name);
 
     cout << "Цех: ";
+    cin.ignore(10000, '\n');
     getline(cin, workshop);
 
     cout << "Зарплата: ";
@@ -105,10 +158,11 @@ void addEmployee() {
     cin >> birthYear;
 
     cout << "Дата поступления (ДД.ММ.ГГГГ): ";
-    cin.ignore();
+    cin.ignore(10000, '\n');
     getline(cin, hireDate);
 
     cout << "Семейное положение: ";
+    cin.ignore(10000, '\n');
     getline(cin, maritalStatus);
 
     cout << "Пол (М/Ж): ";
@@ -118,10 +172,11 @@ void addEmployee() {
     cin >> childrenCount;
 
     cout << "Дата заболевания (ДД.ММ.ГГГГ): ";
-    cin.ignore();
+    cin.ignore(10000, '\n');
     getline(cin, illnessDate);
 
     cout << "Дата выздоровления (ДД.ММ.ГГГГ): ";
+    cin.ignore(10000, '\n');
     getline(cin, recoveryDate);
 
     cout << "Оплата по бюллетеню (%): ";
@@ -133,7 +188,17 @@ void addEmployee() {
     Employee emp(name, workshop, salary, birthYear, hireDate, maritalStatus, 
                  gender, childrenCount, illnessDate, recoveryDate, bulletinPayPercent, averageEarnings);
     db.addEmployee(emp);
-    cout << "Сотрудник успешно добавлен!\n";
+    
+    // Сохранение в БД если подключена
+    if (dbConnection && dbConnection->isConnectedToDatabase()) {
+        if (db.saveToDatabase(emp)) {
+            cout << "Сотрудник успешно добавлен и сохранен в БД!\n";
+        } else {
+            cout << "Сотрудник добавлен, но ошибка при сохранении в БД!\n";
+        }
+    } else {
+        cout << "Сотрудник успешно добавлен!\n";
+    }
 }
 
 void removeEmployee() {
@@ -488,8 +553,14 @@ int main() {
             case 6:
                 db.displayAll();
                 break;
+            case 7:
+                initializeDatabase();
+                break;
             case 0:
                 cout << "До свидания!\n";
+                if (dbConnection && dbConnection->isConnectedToDatabase()) {
+                    dbConnection->disconnect();
+                }
                 return 0;
             default:
                 cout << "Некорректный выбор!\n";
