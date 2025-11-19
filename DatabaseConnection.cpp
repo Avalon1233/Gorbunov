@@ -53,10 +53,10 @@ bool DatabaseConnection::connect(const std::string& databaseFilePath, const std:
     SQLCHAR outConnStr[1024];
     SQLSMALLINT outConnLen = 0;
 
-    ret = SQLDriverConnect(
+    ret = SQLDriverConnectA(
         dbcHandle,
         nullptr,
-        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(conn.c_str())),
+        reinterpret_cast<SQLCHAR*>(conn.data()),
         SQL_NTS,
         outConnStr,
         sizeof(outConnStr),
@@ -110,7 +110,7 @@ DatabaseConnection::QueryResult DatabaseConnection::executeQuery(const std::stri
         throw std::runtime_error("Не удалось подготовить выражение.");
     }
 
-    ret = SQLExecDirect(stmt, const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query.c_str())), SQL_NTS);
+    ret = SQLExecDirectA(stmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(query.c_str())), SQL_NTS);
     if (!SQL_SUCCEEDED(ret)) {
         logOdbcError("Ошибка выполнения запроса", stmt, SQL_HANDLE_STMT);
         SQLFreeHandle(SQL_HANDLE_STMT, stmt);
@@ -129,7 +129,7 @@ DatabaseConnection::QueryResult DatabaseConnection::executeQuery(const std::stri
         SQLSMALLINT decimalDigits = 0;
         SQLSMALLINT nullable = 0;
 
-        SQLDescribeCol(stmt, i, colName, sizeof(colName), &nameLength, &dataType, &colSize, &decimalDigits, &nullable);
+        SQLDescribeColA(stmt, i, colName, sizeof(colName), &nameLength, &dataType, &colSize, &decimalDigits, &nullable);
         columnNames[i - 1] = normalizeColumnName(reinterpret_cast<char*>(colName));
     }
 
@@ -181,7 +181,7 @@ bool DatabaseConnection::executeUpdate(const std::string& query) {
         return false;
     }
 
-    ret = SQLExecDirect(stmt, const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query.c_str())), SQL_NTS);
+    ret = SQLExecDirectA(stmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(query.c_str())), SQL_NTS);
     if (!SQL_SUCCEEDED(ret)) {
         logOdbcError("Ошибка выполнения обновления", stmt, SQL_HANDLE_STMT);
         SQLFreeHandle(SQL_HANDLE_STMT, stmt);
@@ -246,8 +246,8 @@ void DatabaseConnection::logOdbcError(const std::string& message, SQLHANDLE hand
     SQLCHAR errorMsg[SQL_MAX_MESSAGE_LENGTH] = {0};
     SQLSMALLINT textLength = 0;
 
-    while (SQLGetDiagRec(type, handle, record, sqlState, &nativeError, errorMsg,
-                         sizeof(errorMsg), &textLength) != SQL_NO_DATA) {
+    while (SQLGetDiagRecA(type, handle, record, sqlState, &nativeError, errorMsg,
+                          sizeof(errorMsg), &textLength) != SQL_NO_DATA) {
         std::cout << "SQLSTATE=" << sqlState
                   << " NativeError=" << nativeError
                   << " Message=" << errorMsg << "\n";
@@ -263,11 +263,11 @@ bool DatabaseConnection::tableExists(const std::string& tableName) {
     }
 
     SQLCHAR tableType[] = "TABLE";
-    ret = SQLTables(stmt,
-                    nullptr, 0,
-                    nullptr, 0,
-                    reinterpret_cast<SQLCHAR*>(const_cast<char*>(tableName.c_str())), SQL_NTS,
-                    tableType, SQL_NTS);
+    ret = SQLTablesA(stmt,
+                     nullptr, 0,
+                     nullptr, 0,
+                     reinterpret_cast<SQLCHAR*>(const_cast<char*>(tableName.c_str())), SQL_NTS,
+                     tableType, SQL_NTS);
 
     if (!SQL_SUCCEEDED(ret)) {
         SQLFreeHandle(SQL_HANDLE_STMT, stmt);
