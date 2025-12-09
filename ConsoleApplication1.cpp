@@ -6,6 +6,7 @@
 #include <limits>
 #include <clocale>
 #include <memory>
+#include <windows.h>
 #include "Employee.h"
 #include "EmployeeDatabase.h"
 
@@ -474,7 +475,14 @@ void aggregateMenu() {
 }
 
 int main() {
-    setlocale(LC_ALL, "ru_RU.UTF-8");
+    // Установка кодовой страницы консоли на UTF-8 (для Windows)
+    SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
+    
+    // Установка локали для C++
+    setlocale(LC_ALL, ".UTF8");
+    std::locale::global(std::locale(""));
+    
     int choice;
 
     cout << "========================================\n";
