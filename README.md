@@ -63,7 +63,11 @@
 
 ## Компиляция и запуск
 
+<<<<<<< HEAD
 ### С использованием CMake
+=======
+### С использованием CMake (рекомендуется)
+>>>>>>> cc1f4313b492450e58ec61ab1618f987ad7e7338
 ```bash
 mkdir build
 cd build
@@ -75,22 +79,38 @@ cmake --build . --config Release
 ### В Visual Studio
 1. Откройте решение ConsoleApplication1.sln
 2. Убедитесь, что все файлы (.h и .cpp) добавлены в проект
+<<<<<<< HEAD
 3. Никаких дополнительных библиотек не требуется (работа в памяти)
+=======
+3. Добавьте ссылку на библиотеку `odbc32.lib` (для работы с Access)
+>>>>>>> cc1f4313b492450e58ec61ab1618f987ad7e7338
 4. Нажмите Ctrl+F5 для запуска без отладки или F5 для запуска с отладкой
 
 ### Из командной строки (g++)
 ```bash
+<<<<<<< HEAD
 g++ -std=c++17 -o app ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp
+=======
+g++ -std=c++17 -o app ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp DatabaseConnection.cpp -lodbc32
+>>>>>>> cc1f4313b492450e58ec61ab1618f987ad7e7338
 ./app
 ```
 
 ### Из командной строки (MSVC)
 ```bash
+<<<<<<< HEAD
 cl /std:c++17 ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp
 ConsoleApplication1.exe
 ```
 
 **Примечание:** Приложение работает в памяти (без подключения к внешней СУБД).
+=======
+cl /std:c++17 ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp DatabaseConnection.cpp /link odbc32.lib
+ConsoleApplication1.exe
+```
+
+**Примечание:** Для работы с Microsoft Access необходим установленный ODBC-драйвер Access Database Engine. Подробности см. в файле SETUP.md.
+>>>>>>> cc1f4313b492450e58ec61ab1618f987ad7e7338
 
 ## Использование
 
@@ -104,6 +124,7 @@ ConsoleApplication1.exe
 4. Поиск
 5. Агрегирующие запросы
 6. Просмотр всех сотрудников
+7. Подключение к БД Microsoft Access
 0. Выход
 ```
 
@@ -133,7 +154,7 @@ ConsoleApplication1.exe
 3. Будет выведен результат
 
 ## Требования
-- C++ 11 или выше
+- C++ 17 или выше
 - Компилятор: Visual Studio, g++, clang или другой совместимый компилятор
 - Поддержка русского языка (setlocale)
 

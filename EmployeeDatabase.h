@@ -8,12 +8,16 @@
 class EmployeeDatabase {
 private:
     std::vector<Employee> employees;
+<<<<<<< HEAD
+=======
+    std::shared_ptr<DatabaseConnection> dbConn;
+>>>>>>> cc1f4313b492450e58ec61ab1618f987ad7e7338
 
 public:
     // Основные операции
     void addEmployee(const Employee& emp);
-    void removeEmployee(int index);
-    void editEmployee(int index);
+    bool removeEmployee(int index);
+    bool editEmployee(int index);
     void displayAll() const;
     void displayEmployee(int index) const;
 
@@ -52,5 +56,14 @@ public:
     Employee& getEmployee(int index);
     const Employee& getEmployeeConst(int index) const;
 
+<<<<<<< HEAD
     // Работа с внешним хранилищем отключена (только память)
+=======
+    // Работа с БД
+    void setDatabaseConnection(std::shared_ptr<DatabaseConnection> conn);
+    bool loadFromDatabase();
+    bool saveToDatabase(Employee& emp);
+    bool deleteFromDatabase(int id);
+    bool updateInDatabase(int id, const Employee& emp);
+>>>>>>> cc1f4313b492450e58ec61ab1618f987ad7e7338
 };
