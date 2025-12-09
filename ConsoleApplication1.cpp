@@ -108,12 +108,13 @@ void addEmployee() {
 
     cout << "Зарплата: ";
     cin >> salary;
+    cin.ignore(10000, '\n');
 
     cout << "Год рождения: ";
     cin >> birthYear;
+    cin.ignore(10000, '\n');
 
     cout << "Дата поступления (ДД.ММ.ГГГГ): ";
-    cin.ignore(10000, '\n');
     getline(cin, hireDate);
 
     cout << "Семейное положение: ";
@@ -121,12 +122,13 @@ void addEmployee() {
 
     cout << "Пол (М/Ж): ";
     cin >> gender;
+    cin.ignore(10000, '\n');
 
     cout << "Количество детей: ";
     cin >> childrenCount;
+    cin.ignore(10000, '\n');
 
     cout << "Дата заболевания (ДД.ММ.ГГГГ): ";
-    cin.ignore(10000, '\n');
     getline(cin, illnessDate);
 
     cout << "Дата выздоровления (ДД.ММ.ГГГГ): ";
@@ -134,9 +136,11 @@ void addEmployee() {
 
     cout << "Оплата по бюллетеню (%): ";
     cin >> bulletinPayPercent;
+    cin.ignore(10000, '\n');
 
     cout << "Средний заработок: ";
     cin >> averageEarnings;
+    cin.ignore(10000, '\n');
 
     Employee emp(name, workshop, salary, birthYear, hireDate, maritalStatus,
                  gender, childrenCount, illnessDate, recoveryDate, bulletinPayPercent, averageEarnings);
