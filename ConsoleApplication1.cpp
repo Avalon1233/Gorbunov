@@ -6,6 +6,7 @@
 #include <limits>
 #include <clocale>
 #include <memory>
+#define NOMINMAX
 #include <windows.h>
 #include "Employee.h"
 #include "EmployeeDatabase.h"
