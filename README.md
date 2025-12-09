@@ -7,7 +7,7 @@
 
 ### Файлы
 - **Employee.h / Employee.cpp** - Класс для описания сотрудника с 12 основными полями
-- **EmployeeDatabase.h / EmployeeDatabase.cpp** - Класс для управления базой данных сотрудников
+- **EmployeeDatabase.h / EmployeeDatabase.cpp** - Класс для управления списком сотрудников (в памяти)
 - **ConsoleApplication1.cpp** - Главное приложение с интерактивным меню
 
 ## Основные поля сотрудника
@@ -63,7 +63,7 @@
 
 ## Компиляция и запуск
 
-### С использованием CMake (рекомендуется для PostgreSQL)
+### С использованием CMake
 ```bash
 mkdir build
 cd build
@@ -75,22 +75,22 @@ cmake --build . --config Release
 ### В Visual Studio
 1. Откройте решение ConsoleApplication1.sln
 2. Убедитесь, что все файлы (.h и .cpp) добавлены в проект
-3. Добавьте включение libpqxx и PostgreSQL
+3. Никаких дополнительных библиотек не требуется (работа в памяти)
 4. Нажмите Ctrl+F5 для запуска без отладки или F5 для запуска с отладкой
 
 ### Из командной строки (g++)
 ```bash
-g++ -std=c++17 -o app ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp DatabaseConnection.cpp -lpqxx -lpq
+g++ -std=c++17 -o app ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp
 ./app
 ```
 
 ### Из командной строки (MSVC)
 ```bash
-cl /std:c++17 ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp DatabaseConnection.cpp /link libpq.lib
+cl /std:c++17 ConsoleApplication1.cpp Employee.cpp EmployeeDatabase.cpp
 ConsoleApplication1.exe
 ```
 
-**Примечание:** Для работы с PostgreSQL необходимо установить libpqxx. Подробнее см. в файле SETUP.md
+**Примечание:** Приложение работает в памяти (без подключения к внешней СУБД).
 
 ## Использование
 

@@ -5,24 +5,17 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Поиск пакетов
-find_package(PostgreSQL REQUIRED)
-
-# Включение директорий
-include_directories(${PostgreSQL_INCLUDE_DIRS})
+## Удалена зависимость от PostgreSQL
 
 # Исходные файлы
 set(SOURCES
     ConsoleApplication1.cpp
     Employee.cpp
     EmployeeDatabase.cpp
-    DatabaseConnection.cpp
 )
 
 # Создание исполняемого файла
 add_executable(employee_app ${SOURCES})
-
-# Связывание с библиотеками PostgreSQL
-target_link_libraries(employee_app ${PostgreSQL_LIBRARIES})
 
 # Для Windows с MSVC
 if(MSVC)
