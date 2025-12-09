@@ -480,9 +480,8 @@ int main() {
     SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
     
-    // Установка локали для C++
+    // Установка локали для работы с русским текстом
     setlocale(LC_ALL, ".UTF8");
-    std::locale::global(std::locale(""));
     
     int choice;
 
