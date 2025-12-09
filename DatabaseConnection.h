@@ -1,49 +1,5 @@
-// DatabaseConnection removed — database support disabled.
-// Header kept as placeholder to avoid build issues if accidentally referenced.
+// DatabaseConnection removed — file intentionally blank.
+// Database support was removed from the project; this header is a harmless placeholder.
 
 #pragma once
-<<<<<<< HEAD
 
-=======
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
-#include <windows.h>
-#include <sql.h>
-#include <sqlext.h>
-#include <string>
-#include <unordered_map>
-#include <vector>
-
-class DatabaseConnection {
-public:
-    using Row = std::unordered_map<std::string, std::string>;
-    using QueryResult = std::vector<Row>;
-
-private:
-    SQLHENV envHandle;
-    SQLHDBC dbcHandle;
-    bool isConnected;
-    std::string databasePath;
-
-    static std::string normalizeColumnName(const std::string& name);
-    static std::wstring toWide(const std::string& value);
-    static std::string fromWide(const SQLWCHAR* buffer, SQLLEN length);
-    void logOdbcError(const std::string& message, SQLHANDLE handle, SQLSMALLINT type) const;
-    bool tableExists(const std::string& tableName);
-
-public:
-    DatabaseConnection();
-    ~DatabaseConnection();
-
-    bool connect(const std::string& databaseFilePath, const std::string& password = "");
-    bool isConnectedToDatabase() const;
-    void disconnect();
-
-    QueryResult executeQuery(const std::string& query);
-    bool executeUpdate(const std::string& query);
-
-    bool initializeTables();
-};
->>>>>>> cc1f4313b492450e58ec61ab1618f987ad7e7338

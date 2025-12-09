@@ -5,76 +5,21 @@
 #include <locale>
 #include <clocale>
 #include <memory>
-#include <filesystem>
-#include <limits>
 #include "Employee.h"
 #include "EmployeeDatabase.h"
 
 using namespace std;
-namespace fs = std::filesystem;
 
 EmployeeDatabase db;
 
-<<<<<<< HEAD
-// Поддержка внешней БД удалена — работа только в памяти
-=======
-void clearInputLine() {
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-}
-
-void initializeDatabase() {
-    cout << "\n===== ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ =====\n";
-    cout << "Работа с Microsoft Access (.mdb/.accdb)\n";
-
-    clearInputLine();
-
-    string dbPath;
-    cout << "Укажите полный путь к файлу БД: ";
-    getline(cin, dbPath);
-
-    if (dbPath.empty()) {
-        cout << "Путь к файлу не может быть пустым!\n";
-        return;
-    }
-
-    if (!fs::exists(dbPath)) {
-        cout << "Файл БД не найден: " << dbPath << "\n";
-        return;
-    }
-
-    string password;
-    cout << "Пароль (если отсутствует, оставьте пустым): ";
-    getline(cin, password);
-
-    dbConnection = make_shared<DatabaseConnection>();
-    
-    if (dbConnection->connect(dbPath, password)) {
-        if (dbConnection->initializeTables()) {
-            db.setDatabaseConnection(dbConnection);
-            db.loadFromDatabase();
-            cout << "Успешное подключение и инициализация БД Access!\n";
-        } else {
-            cout << "Ошибка инициализации таблиц!\n";
-        }
-    } else {
-        cout << "Ошибка подключения к БД!\n";
-        dbConnection = nullptr;
-    }
-}
->>>>>>> cc1f4313b492450e58ec61ab1618f987ad7e7338
-
 void displayMainMenu() {
-    cout << "\n========== ГЛАВНОЕ МЕНЮ ==========\n";
+    cout << "\n========== ГЛАВНОЕ МЕНЮ ==========" << "\n";
     cout << "1. Управление сотрудниками\n";
     cout << "2. Сортировка\n";
     cout << "3. Фильтрация\n";
     cout << "4. Поиск\n";
     cout << "5. Агрегирующие запросы\n";
     cout << "6. Просмотр всех сотрудников\n";
-<<<<<<< HEAD
-=======
-    cout << "7. Подключение к БД Microsoft Access\n";
->>>>>>> cc1f4313b492450e58ec61ab1618f987ad7e7338
     cout << "0. Выход\n";
     cout << "==================================\n";
     cout << "Выбор: ";
@@ -92,7 +37,7 @@ void displayManagementMenu() {
 }
 
 void displaySortMenu() {
-    cout << "\n========== СОРТИРОВКА ==========\n";
+    cout << "\n========== СОРТИРОВКА ==========" << "\n";
     cout << "1. По ФИО (А-Я)\n";
     cout << "2. По зарплате (убывание)\n";
     cout << "3. По цеху\n";
@@ -104,7 +49,7 @@ void displaySortMenu() {
 }
 
 void displayFilterMenu() {
-    cout << "\n========== ФИЛЬТРАЦИЯ ==========\n";
+    cout << "\n========== ФИЛЬТРАЦИЯ ==========" << "\n";
     cout << "1. По цеху\n";
     cout << "2. По семейному положению\n";
     cout << "3. По полу\n";
@@ -116,7 +61,7 @@ void displayFilterMenu() {
 }
 
 void displaySearchMenu() {
-    cout << "\n========== ПОИСК ==========\n";
+    cout << "\n========== ПОИСК ==========" << "\n";
     cout << "1. По ФИО\n";
     cout << "2. По цеху\n";
     cout << "0. Назад в главное меню\n";
@@ -144,11 +89,11 @@ void addEmployee() {
     string name, workshop, hireDate, maritalStatus, illnessDate, recoveryDate;
     double salary, bulletinPayPercent, averageEarnings;
     int birthYear, childrenCount;
-    char gender = ' ';
+    char gender;
 
     cout << "\n=== Добавление нового сотрудника ===\n";
     cout << "ФИО: ";
-    clearInputLine();
+    cin.ignore(10000, '\n');
     getline(cin, name);
 
     cout << "Цех: ";
@@ -156,33 +101,25 @@ void addEmployee() {
 
     cout << "Зарплата: ";
     cin >> salary;
-    clearInputLine();
 
     cout << "Год рождения: ";
     cin >> birthYear;
-    clearInputLine();
 
     cout << "Дата поступления (ДД.ММ.ГГГГ): ";
+    cin.ignore(10000, '\n');
     getline(cin, hireDate);
 
     cout << "Семейное положение: ";
     getline(cin, maritalStatus);
 
-    while (gender == ' ') {
-        cout << "Пол (М/Ж): ";
-        string genderInput;
-        getline(cin, genderInput);
-        gender = Employee::normalizeGenderInput(genderInput);
-        if (gender == ' ') {
-            cout << "Введите корректное значение (М или Ж).\n";
-        }
-    }
+    cout << "Пол (М/Ж): ";
+    cin >> gender;
 
     cout << "Количество детей: ";
     cin >> childrenCount;
-    clearInputLine();
 
     cout << "Дата заболевания (ДД.ММ.ГГГГ): ";
+    cin.ignore(10000, '\n');
     getline(cin, illnessDate);
 
     cout << "Дата выздоровления (ДД.ММ.ГГГГ): ";
@@ -190,15 +127,15 @@ void addEmployee() {
 
     cout << "Оплата по бюллетеню (%): ";
     cin >> bulletinPayPercent;
-    clearInputLine();
 
     cout << "Средний заработок: ";
     cin >> averageEarnings;
-    clearInputLine();
 
     Employee emp(name, workshop, salary, birthYear, hireDate, maritalStatus, 
                  gender, childrenCount, illnessDate, recoveryDate, bulletinPayPercent, averageEarnings);
     db.addEmployee(emp);
+    cout << "Сотрудник успешно добавлен!\n";
+}
 <<<<<<< HEAD
     cout << "Сотрудник успешно добавлен!\n";
 =======
