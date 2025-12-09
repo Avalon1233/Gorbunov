@@ -3,6 +3,7 @@
 #include <vector>
 #include <iomanip>
 #include <locale>
+#include <limits>
 #include <clocale>
 #include <memory>
 #include "Employee.h"
@@ -11,6 +12,10 @@
 using namespace std;
 
 EmployeeDatabase db;
+
+void clearInputLine() {
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
 
 void displayMainMenu() {
     cout << "\n========== ГЛАВНОЕ МЕНЮ ==========" << "\n";
@@ -131,28 +136,10 @@ void addEmployee() {
     cout << "Средний заработок: ";
     cin >> averageEarnings;
 
-    Employee emp(name, workshop, salary, birthYear, hireDate, maritalStatus, 
+    Employee emp(name, workshop, salary, birthYear, hireDate, maritalStatus,
                  gender, childrenCount, illnessDate, recoveryDate, bulletinPayPercent, averageEarnings);
     db.addEmployee(emp);
     cout << "Сотрудник успешно добавлен!\n";
-}
-<<<<<<< HEAD
-    cout << "Сотрудник успешно добавлен!\n";
-=======
-    int storedIndex = db.getTotalEmployees() - 1;
-    Employee& storedEmployee = db.getEmployee(storedIndex);
-    
-    // Сохранение в БД если подключена
-    if (dbConnection && dbConnection->isConnectedToDatabase()) {
-        if (db.saveToDatabase(storedEmployee)) {
-            cout << "Сотрудник успешно добавлен и сохранен в БД!\n";
-        } else {
-            cout << "Сотрудник добавлен, но ошибка при сохранении в БД!\n";
-        }
-    } else {
-        cout << "Сотрудник успешно добавлен!\n";
-    }
->>>>>>> cc1f4313b492450e58ec61ab1618f987ad7e7338
 }
 
 void removeEmployee() {

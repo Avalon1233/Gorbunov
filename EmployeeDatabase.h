@@ -12,8 +12,8 @@ private:
 public:
     // Основные операции
     void addEmployee(const Employee& emp);
-    void removeEmployee(int index);
-    void editEmployee(int index);
+    bool removeEmployee(int index);
+    bool editEmployee(int index);
     void displayAll() const;
     void displayEmployee(int index) const;
 
